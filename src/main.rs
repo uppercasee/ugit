@@ -15,22 +15,23 @@ enum Commands {
     Init, 
 }
 
+fn create_directory(path: &str) -> Result<(), std::io::Error> {
+    fs::create_dir_all(path).map_err(|err| {
+        eprintln!("Error creating directory '{}': {}", path, err);
+        err
+    })
+}
+
 fn main() {
     let args = Args::parse();
     match args.command {
         Some(Commands::Init) => {
-            if let Err(err) = fs::create_dir_all("./ugit/objects/info"){
-                eprintln!("Error: {}", err)
-            }else if let Err(err) = fs::create_dir_all("./ugit/objects/pack") {
-                eprintln!("Error: {}", err)
-            }else if let Err(err) = fs::create_dir_all("./ugit/refs/heads") {
-                eprintln!("Error: {}", err)
-            }else if let Err(err) = fs::create_dir_all("./ugit/refs/tags") {
-                eprintln!("Error: {}", err)
-            }else if let Err(err) = fs::write("./ugit/HEAD", "ref: refs/heads/master\n") {
-                eprintln!("Error: {}", err);
-            }else{
-                println!("Initialized git: Created directory structure in './ugit'");}
+            create_directory("./ugit/objects/info").unwrap();
+            create_directory("./ugit/objects/pack").unwrap();
+            create_directory("./ugit/refs/heads").unwrap();
+            create_directory("./ugit/refs/tags").unwrap();
+            fs::write("./ugit/HEAD", "ref: refs/heads/master\n").unwrap();
+            println!("Initialized git: Created directory structure in './ugit'");
         }
         Some(Commands::Clear) => {
             if let Err(err) = fs::remove_dir_all("./ugit"){

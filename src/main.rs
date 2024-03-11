@@ -1,6 +1,11 @@
-// use std::path::PathBuf;
+use anyhow::Context;
 use clap::{Parser, Subcommand};
-use std::fs;
+use flate2::read::ZlibDecoder;
+use std::{
+    ffi::CStr,
+    fs,
+    io::{BufRead, BufReader, Read, Write},
+};
 
 #[derive(Parser)]
 #[clap(version, about)]
@@ -9,10 +14,15 @@ struct Args {
     command: Option<Commands>,
 }
 
-#[derive(Subcommand)]
+#[derive(Debug, Subcommand)]
 enum Commands {
     Clear,
-    Init, 
+    Init,
+    CatFile {
+        #[clap(short = 'p')]
+        pretty_print: bool,
+        object_hash: String,
+    },
 }
 
 fn create_directory(path: &str) -> Result<(), std::io::Error> {
@@ -22,7 +32,7 @@ fn create_directory(path: &str) -> Result<(), std::io::Error> {
     })
 }
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     match args.command {
         Some(Commands::Init) => {
@@ -34,14 +44,48 @@ fn main() {
             println!("Initialized git: Created directory structure in './ugit'");
         }
         Some(Commands::Clear) => {
-            if let Err(err) = fs::remove_dir_all("./ugit"){
+            if let Err(err) = fs::remove_dir_all("./ugit") {
                 eprintln!("Error: {}", err)
             } else {
                 println!("Directory './ugit' removed successfully");
+            }
+        }
+        Some(Commands::CatFile {
+            pretty_print,
+            object_hash,
+        }) => {
+            // TODO: shortest hash match
+            let hash = &object_hash[..2];
+            let file = &object_hash[2..];
+            let path = format!("./ugit/objects/{}/{}", hash, file);
+            let f = fs::File::open(path).context("couldn't open ugit/objects file")?;
+            let z = ZlibDecoder::new(f);
+            let mut z = BufReader::new(z);
+            let mut buf = Vec::new();
+            z.read_until(0, &mut buf)
+                .context("read header from ugit/objects")?;
+            let header = CStr::from_bytes_with_nul(&buf).expect("there is one null at the end.");
+            let header = header
+                .to_str()
+                .context("ugit/objects file header isn't valid UTF-8")?;
+            let Some(size) = header.strip_prefix("blob ") else {
+                anyhow::bail!("ugit/object header didn't start with 'blob ': '{header}'")
+            };
+            let size: usize = size.parse().context("couldn't parse size")?;
+            let mut contents = Vec::with_capacity(size);
+            z.read_to_end(&mut contents)
+                .context("read contents from ugit/objects")?;
+            if pretty_print {
+                print!("{}", String::from_utf8_lossy(&contents));
+            } else {
+                std::io::stdout()
+                    .write_all(&contents)
+                    .context("write contents to stdout")?;
             }
         }
         None => {
             println!("No commands provided");
         }
     }
+    Ok(())
 }

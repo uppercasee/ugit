@@ -2,7 +2,7 @@ use anyhow::Context;
 use flate2::read::ZlibDecoder;
 use std::{
     ffi::CStr,
-    io::{BufRead, BufReader, Read, Write},
+    io::{BufRead, BufReader, Read},
 };
 use std::fs::File;
 

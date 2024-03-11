@@ -1,12 +1,14 @@
 mod catfile;
 mod hashobject;
 mod init;
+mod lstree;
 
 use clap::{Parser, Subcommand};
 
 use catfile::cat_file;
 use hashobject::hash_objects;
 use init::{clear_git, init_git};
+use lstree::ls_tree;
 
 #[derive(Parser)]
 #[clap(version, about)]
@@ -27,6 +29,18 @@ enum Commands {
     HashObject {
         objectfile: String,
     },
+    LsTree {
+        object_hash: String,
+    },
+    WriteTree {
+        treeish: String,
+    },
+    // Commit {
+    //     message: String,
+    // },
+    // Clone {
+    //     url: String,
+    // },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -46,6 +60,12 @@ fn main() -> anyhow::Result<()> {
         }
         Some(Commands::HashObject { objectfile }) => {
             hash_objects(objectfile).unwrap();
+        }
+        Some(Commands::LsTree { object_hash }) => {
+            ls_tree(object_hash).unwrap();
+        }
+        Some(Commands::WriteTree { treeish }) => {
+            println!("WriteTree: {}", treeish);
         }
         None => {
             println!("No commands provided");

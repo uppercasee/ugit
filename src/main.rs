@@ -1,14 +1,5 @@
-mod catfile;
-mod hashobject;
-mod init;
-mod lstree;
-
 use clap::{Parser, Subcommand};
-
-use catfile::cat_file;
-use hashobject::hash_objects;
-use init::{clear_git, init_git};
-use lstree::ls_tree;
+use ugit::{cat_file, hash_objects, clear_git, init_git, ls_tree, write_tree};
 
 #[derive(Parser)]
 #[clap(version, about)]
@@ -65,7 +56,7 @@ fn main() -> anyhow::Result<()> {
             ls_tree(object_hash).unwrap();
         }
         Some(Commands::WriteTree { treeish }) => {
-            println!("WriteTree: {}", treeish);
+            write_tree(treeish).unwrap();
         }
         None => {
             println!("No commands provided");

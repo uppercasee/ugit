@@ -21,19 +21,43 @@ pub fn cat_file(pretty_print: bool, object_hash: String) -> anyhow::Result<()> {
     let header = header
         .to_str()
         .context("ugit/objects file header isn't valid UTF-8")?;
-    let Some(size) = header.strip_prefix("blob ") else {
-        anyhow::bail!("ugit/object header didn't start with 'blob ': '{header}'")
-    };
-    let size: usize = size.parse().context("couldn't parse size")?;
-    let mut contents = Vec::with_capacity(size);
-    z.read_to_end(&mut contents)
-        .context("read contents from ugit/objects")?;
-    if pretty_print {
-        print!("{}", String::from_utf8_lossy(&contents));
-    } else {
-        std::io::stdout()
-            .write_all(&contents)
-            .context("write contents to stdout")?;
+    // support for both blob and tree objects
+    if header.starts_with("blob") {
+        let mut content = Vec::new();
+        z.read_to_end(&mut content)
+            .context("read content from ugit/objects")?;
+        if pretty_print {
+            let content = String::from_utf8(content).context("content isn't valid UTF-8")?;
+            println!("{}", content);
+        } else {
+            std::io::stdout().write_all(&content).context("write content to stdout")?;
+        }
+    } else if header.starts_with("tree") {
+        let mut content = Vec::new();
+        z.read_to_end(&mut content)
+            .context("read content from ugit/objects")?;
+        let content = String::from_utf8(content).context("content isn't valid UTF-8")?;
+        let mut entries = Vec::new();
+        for line in content.lines() {
+            let mut parts = line.split(' ');
+            let mode = parts.next().expect("mode is the first part");
+            let path = parts.next().expect("path is the second part");
+            let hash = parts.next().expect("hash is the third part");
+            entries.push((mode, path, hash));
+        }
+        entries.sort_by(|a, b| a.1.cmp(b.1));
+        for (mode, path, hash) in entries {
+            println!("{} {} {}", mode, hash, path);
+        }
+    } else if header.starts_with("commit") {
+        let mut content = Vec::new();
+        z.read_to_end(&mut content)
+            .context("read content from ugit/objects")?;
+        let content = String::from_utf8(content).context("content isn't valid UTF-8")?;
+        println!("{}", content);
+    }
+    else {
+        panic!("unknown object type: {}", header);
     }
     Ok(())
 }

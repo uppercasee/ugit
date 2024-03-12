@@ -2,12 +2,12 @@ use anyhow::Context;
 use crypto_hash::{hex_digest, Algorithm};
 use std::{fs, io::Write};
 
-pub fn hash_objects(objectfile: String) -> anyhow::Result<()> {
+pub fn hash_objects(objectfile: String) -> anyhow::Result<String> {
     let contents = fs::read(objectfile).context("couldn't read object file")?;
     let header = format!("blob {}\0", contents.len());
     let data = [header.as_bytes(), &contents].concat();
     let hash = hex_digest(Algorithm::SHA1, &data);
-    println!("{}", hash);
+    // println!("{}", hash);
     // Generate file path based on hash
     let object_path = format!("./ugit/objects/{}", &hash[..2]);
     fs::create_dir_all(&object_path)
@@ -23,5 +23,5 @@ pub fn hash_objects(objectfile: String) -> anyhow::Result<()> {
         .with_context(|| format!("finishing writing to object file: {}", object_file))?;
 
     // println!("Object written to: {}", object_file);
-    Ok(())
+    Ok(hash)
 }

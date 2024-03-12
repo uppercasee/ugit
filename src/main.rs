@@ -24,7 +24,7 @@ enum Commands {
         object_hash: String,
     },
     WriteTree {
-        treeish: String,
+        tree: String,
     },
     // Commit {
     //     message: String,
@@ -50,13 +50,14 @@ fn main() -> anyhow::Result<()> {
             cat_file(pretty_print, object_hash).unwrap();
         }
         Some(Commands::HashObject { objectfile }) => {
-            hash_objects(objectfile).unwrap();
+            let hash = hash_objects(objectfile).unwrap();
+            println!("{}", hash);
         }
         Some(Commands::LsTree { object_hash }) => {
             ls_tree(object_hash).unwrap();
         }
-        Some(Commands::WriteTree { treeish }) => {
-            write_tree(treeish).unwrap();
+        Some(Commands::WriteTree { tree }) => {
+            write_tree(tree).unwrap();
         }
         None => {
             println!("No commands provided");

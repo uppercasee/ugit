@@ -57,7 +57,8 @@ fn main() -> anyhow::Result<()> {
             ls_tree(object_hash).unwrap();
         }
         Some(Commands::WriteTree { tree }) => {
-            write_tree(tree).unwrap();
+            let hash = write_tree(tree).unwrap();
+            println!("{}", hash);
         }
         None => {
             println!("No commands provided");

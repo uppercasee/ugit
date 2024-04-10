@@ -9,7 +9,7 @@ use ignore::WalkBuilder;
 use crypto_hash::{hex_digest, Algorithm};
 
 
-pub fn write_tree(tree: String) -> anyhow::Result<()> {
+pub fn write_tree(tree: String) -> anyhow::Result<String> {
     // You're expected to write the entire working directory as a tree object and print the 40-char SHA to stdout.
     // The tree object is a simple list of all the files in the working directory with their names, modes, and hashes.
     // ignore .git directory
@@ -42,30 +42,36 @@ pub fn write_tree(tree: String) -> anyhow::Result<()> {
 
     let mut tree = Vec::new();
     for entry in entries {
+        // println!("{}", entry);
         // check if entry is a file or directory
         let metadata = std::fs::metadata(&entry).context("couldn't get metadata")?;
         if metadata.is_file() {
             let hash = hash_objects(entry.clone())?;
             let mode = "100644";
-            let entry_line = format!("{} {}\0{}", mode, entry, hash);
-            println!("{}", entry_line);
+            let entry_line = format!("{} blob {} {}", mode, entry, hash);
+            // println!("{}", entry_line);
             tree.push(entry_line);
         } else if metadata.is_dir() {
             let new_entry = format!("./{}", entry);
             let mode = "040000";
-            write_tree(new_entry)?;
-            println!("{} tree {}", mode, entry);
+            let hash = write_tree(new_entry)?;
+            let entry_line = format!("{} tree {} {}", mode, entry, hash);
+            tree.push(entry_line);
         }
     }
 
     // Write tree to object file
     let tree_content = tree.join("\n");
+    // println!("{}", tree_content);
     let header = format!("tree {}\0", tree_content.len());
     let mut data = header.into_bytes();
     data.append(&mut tree_content.into_bytes());
+
+    // println!("{:?}", data);
+
     let hash = store_tree_object(&String::from_utf8(data).context("couldn't convert data to string")?)?;
-    println!("{}", hash);
-    Ok(())
+    // println!("{}", hash);
+    Ok(hash)
 }
 
 pub fn store_tree_object(tree_content: &str) -> Result<String> {

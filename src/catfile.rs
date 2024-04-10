@@ -30,33 +30,47 @@ pub fn cat_file(pretty_print: bool, object_hash: String) -> anyhow::Result<()> {
             let content = String::from_utf8(content).context("content isn't valid UTF-8")?;
             println!("{}", content);
         } else {
-            std::io::stdout().write_all(&content).context("write content to stdout")?;
+            std::io::stdout()
+                .write_all(&content)
+                .context("write content to stdout")?;
         }
     } else if header.starts_with("tree") {
-        let mut content = Vec::new();
+        let Some(size) = header.strip_prefix("tree ") else {
+            anyhow::bail!("ugit/object header didn't start with 'tree ': '{header}'")
+        };
+        let size: usize = size.parse().context("couldn't parse size")?;
+        // println!("size: {}", size);
+        let mut content = Vec::with_capacity(size);
         z.read_to_end(&mut content)
             .context("read content from ugit/objects")?;
-        let content = String::from_utf8(content).context("content isn't valid UTF-8")?;
-        let mut entries = Vec::new();
-        for line in content.lines() {
-            let mut parts = line.split(' ');
-            let mode = parts.next().expect("mode is the first part");
-            let path = parts.next().expect("path is the second part");
-            let hash = parts.next().expect("hash is the third part");
-            entries.push((mode, path, hash));
-        }
-        entries.sort_by(|a, b| a.1.cmp(b.1));
-        for (mode, path, hash) in entries {
-            println!("{} {} {}", mode, hash, path);
+
+        if pretty_print {
+            let content = String::from_utf8(content).context("content isn't valid UTF-8")?;
+            println!("{}", content);
+        } else {
+            std::io::stdout()
+                .write_all(&content)
+                .context("write content to stdout")?;
         }
     } else if header.starts_with("commit") {
-        let mut content = Vec::new();
+        let Some(size) = header.strip_prefix("commit ") else {
+            anyhow::bail!("ugit/object header didn't start with 'commit ': '{header}'")
+        };
+        let size: usize = size.parse().context("couldn't parse size")?;
+        // println!("size: {}", size);
+        let mut content = Vec::with_capacity(size);
         z.read_to_end(&mut content)
             .context("read content from ugit/objects")?;
-        let content = String::from_utf8(content).context("content isn't valid UTF-8")?;
-        println!("{}", content);
-    }
-    else {
+
+        if pretty_print {
+            let content = String::from_utf8(content).context("content isn't valid UTF-8")?;
+            println!("{}", content);
+        } else {
+            std::io::stdout()
+                .write_all(&content)
+                .context("write content to stdout")?;
+        }
+    } else {
         panic!("unknown object type: {}", header);
     }
     Ok(())

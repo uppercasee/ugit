@@ -10,7 +10,7 @@
 ## Commands
 - **clear:** Delete the git repository.(made only for development)
 - **init:** Initialize a new Git repository.
-- **cat-file:** Provide content or type and size information for repository objects. (currently only blob)
+- **cat-file:** Provide content or type and size information for repository objects. 
 - **hash-object:** Compute the object ID and creates a blob from a file.
 - **ls-tree:** List the contents of a tree object.
 

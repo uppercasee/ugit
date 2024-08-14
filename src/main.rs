@@ -1,10 +1,20 @@
+use std::path::Path;
 use clap::Parser;
 use ugit::{clear_git, init_git};
 use ugit::{cat_file, hash_objects, ls_tree, write_tree};
 use ugit::{Args, Commands};
 
+fn is_git_repo() -> bool {
+    Path::new("./ugit").exists()
+}
+
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
+
+    if !is_git_repo() && !matches!(args.command, Some(Commands::Init)) {
+        println!("Not a Git repository (or any of the parent directories): /ugit");
+        std::process::exit(1);
+    }
 
     match args.command {
         Some(Commands::Init) => {

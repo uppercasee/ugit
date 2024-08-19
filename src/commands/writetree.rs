@@ -10,9 +10,6 @@ use crypto_hash::{hex_digest, Algorithm};
 
 
 pub fn write_tree(tree: String) -> anyhow::Result<String> {
-    // You're expected to write the entire working directory as a tree object and print the 40-char SHA to stdout.
-    // The tree object is a simple list of all the files in the working directory with their names, modes, and hashes.
-    // ignore .git directory
     let mut is_first_entry = true;
     let mut entries = Vec::new();
     for entry in WalkBuilder::new(tree)
@@ -46,7 +43,7 @@ pub fn write_tree(tree: String) -> anyhow::Result<String> {
         // check if entry is a file or directory
         let metadata = std::fs::metadata(&entry).context("couldn't get metadata")?;
         if metadata.is_file() {
-            let hash = hash_objects(entry.clone())?;
+            let hash = hash_objects(&entry)?;
             let mode = "100644";
             let entry_line = format!("{} blob {} {}", mode, entry, hash);
             // println!("{}", entry_line);

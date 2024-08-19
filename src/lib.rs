@@ -7,4 +7,6 @@ pub use commands::cat_file;
 pub use commands::hash_objects;
 pub use commands::ls_tree;
 pub use commands::write_tree;
+pub use commands::add_to_index;
+pub use commands::index_read;
 pub use cli::{Args, Commands};

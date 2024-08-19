@@ -45,4 +45,13 @@ pub enum Commands {
         /// The tree to write.
         tree: String,
     },
+
+    /// Adds a file to the staging area.
+    Add {
+        /// Path to the object file.
+        objectfile: String,
+    },
+    
+    /// Lists the index file
+    LsFiles {},
 }

@@ -1,6 +1,7 @@
 use std::path::Path;
+
 use clap::Parser;
-use ugit::{clear_git, init_git};
+use ugit::{add_to_index, clear_git, index_read, init_git};
 use ugit::{cat_file, hash_objects, ls_tree, write_tree};
 use ugit::{Args, Commands};
 
@@ -27,7 +28,7 @@ fn main() -> anyhow::Result<()> {
             cat_file(pretty_print, object_hash)?;
         }
         Some(Commands::HashObject { objectfile }) => {
-            let hash = hash_objects(objectfile)?;
+            let hash = hash_objects(&objectfile)?;
             println!("{}", hash);
         }
         Some(Commands::LsTree { object_hash }) => {
@@ -36,6 +37,12 @@ fn main() -> anyhow::Result<()> {
         Some(Commands::WriteTree { tree }) => {
             let hash = write_tree(tree)?;
             println!("{}", hash);
+        }
+        Some(Commands::Add { objectfile }) => {
+            add_to_index(objectfile)?;
+        }
+        Some(Commands::LsFiles {}) => {
+            index_read()?;
         }
         None => {
             println!("No commands provided");

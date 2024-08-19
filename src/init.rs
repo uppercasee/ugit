@@ -13,8 +13,16 @@ pub fn init_git() -> Result<(), io::Error> {
     create_directory("./ugit/objects/pack")?;
     create_directory("./ugit/refs/heads")?;
     create_directory("./ugit/refs/tags")?;
-    fs::write("./ugit/HEAD", "ref: refs/heads/master\n")?;
+    create_directory("./ugit/hooks")?;
+    create_directory("./ugit/info")?;
+    create_directory("./ugit/logs")?;
+
+    fs::write("./ugit/HEAD", "ref: refs/heads/main\n")?;
+    fs::write("./ugit/config", "[core]\n\trepositoryformatversion = 0\n\tbare = false\n")?;
+    fs::write("./ugit/index", "")?;
+
     println!("Initialized git: Created directory structure in './ugit'");
+
     Ok(())
 }
 

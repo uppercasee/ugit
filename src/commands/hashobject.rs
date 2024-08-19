@@ -2,7 +2,7 @@ use anyhow::Context;
 use crypto_hash::{hex_digest, Algorithm};
 use std::{fs, io::Write};
 
-pub fn hash_objects(objectfile: String) -> anyhow::Result<String> {
+pub fn hash_objects(objectfile: &String) -> anyhow::Result<String> {
     let contents = fs::read(objectfile).context("couldn't read object file")?;
     let header = format!("blob {}\0", contents.len());
     let data = [header.as_bytes(), &contents].concat();

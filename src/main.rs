@@ -28,7 +28,8 @@ fn main() -> anyhow::Result<()> {
             cat_file(pretty_print, object_hash)?;
         }
         Some(Commands::HashObject { objectfile }) => {
-            let hash = hash_objects(&objectfile)?;
+            let hash_vec = hash_objects(&objectfile)?;
+            let hash = hex::encode(hash_vec);
             println!("{}", hash);
         }
         Some(Commands::LsTree { object_hash }) => {

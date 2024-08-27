@@ -1,37 +1,25 @@
-//use anyhow::Context;
-//use crypto_hash::{hex_digest, Algorithm};
+use anyhow::{Context, Result};
 
-use std::{fs::File, io::Write};
+use crate::{Index, IndexEntry};
 
-use crate::hash_objects;
+pub fn add_to_index(objectfile: String) -> Result<()> {
+    let index = Index::default();
 
-pub fn add_to_index(objectfile: String) -> anyhow::Result<String> {
-    //let contents = fs::read(objectfile).context("couldn't read object file")?;
-    //let header = format!("blob {}\0", contents.len());
-    //let data = [header.as_bytes(), &contents].concat();
-    //let hash = hex_digest(Algorithm::SHA1, &data);
-    let hash = hash_objects(&objectfile)?;
-    println!("{}", hash);
+    let mut index = index.read()?;
 
-    let f_format = format!("{} {}\n", &hash, &objectfile);
-    println!("{}", f_format);
+    let entry = IndexEntry::from_path(&objectfile)
+        .with_context(|| format!("Failed to create index entry for file: {}", objectfile))?;
 
-    let mut ff = File::options().write(true).read(true).append(true).open("ugit/index")?;
-    ff.write_all(f_format.as_bytes())?;
+    // Step 3: Add or update the entry in the index
+    index.remove_entry(&objectfile); // Ensure no duplicate entries
+    index.add_entries(vec![entry]);
 
-    // Generate file path based on hash
-    //let object_path = format!("./ugit/objects/{}", &hash[..2]);
-    //fs::create_dir_all(&object_path)
-    //    .with_context(|| format!("couldn't create object directory: {}", object_path))?;
-    //
-    //let object_file = format!("{}/{}", object_path, &hash[2..]);
-    //let z = flate2::write::ZlibEncoder::new(file, flate2::Compression::default());
-    //let mut z = flate2::write::ZlibEncoder::new(file, flate2::Compression::default());
-    //z.write_all(&data)
-    //    .with_context(|| format!("write data to object file: {}", object_file))?;
-    //z.finish()
-    //    .with_context(|| format!("finishing writing to object file: {}", object_file))?;
-    //
-    // println!("Object written to: {}", object_file);
-    Ok(hash)
+    // Step 4: Write the updated index to the index file
+    index
+        .write()
+        .with_context(|| "Failed to write updated index file")?;
+
+    println!("File added to index: {}", objectfile);
+
+    Ok(())
 }

@@ -1,16 +1,17 @@
-use crate::find_index;
-
-use super::index_read::read_from_file;
-
+use crate::{commands::index_read, find_index};
 
 pub fn rm() -> anyhow::Result<()> {
     // let repo = find_repo_root()?;
     let index_file = find_index()?;
-    let index_read = read_from_file(index_file)?;
+    println!("Index file: {:?}", index_file);
+    let (entries, lines) = index_read()?;  
 
-    for line in index_read {
-        println!("{:?}", line);
+    println!("Number of entries: {}", entries);
+
+    for line in lines {
+        println!("{}", line);
     }
+
 
     Ok(())
 }

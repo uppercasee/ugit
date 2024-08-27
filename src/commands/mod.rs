@@ -6,6 +6,7 @@ mod utils;
 mod add;
 mod index_read;
 mod rm;
+mod init;
 
 pub use index_read::index_read;
 pub use add::add_to_index;
@@ -15,3 +16,4 @@ pub use lstree::ls_tree;
 pub use writetree::write_tree;
 pub use utils::get_full_path_from_hash;
 pub use rm::rm;
+pub use init::{init_git, clear_git};

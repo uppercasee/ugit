@@ -43,7 +43,8 @@ pub fn write_tree(tree: String) -> anyhow::Result<String> {
         // check if entry is a file or directory
         let metadata = std::fs::metadata(&entry).context("couldn't get metadata")?;
         if metadata.is_file() {
-            let hash = hash_objects(&entry)?;
+            let hash_vec = hash_objects(&entry)?;
+            let hash = hex::encode(hash_vec);
             let mode = "100644";
             let entry_line = format!("{} blob {} {}", mode, entry, hash);
             // println!("{}", entry_line);

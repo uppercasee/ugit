@@ -1,14 +1,14 @@
 use std::fs;
 use std::io;
+use anyhow::{Result, Context};
 
-fn create_directory(path: &str) -> Result<(), io::Error> {
-    fs::create_dir_all(path).map_err(|err| {
-        eprintln!("Error creating directory '{}': {}", path, err);
-        err
-    })
+fn create_directory(path: &str) -> Result<()> {
+    fs::create_dir_all(path).with_context(|| "Error creating directory")?;
+
+    Ok(())
 }
 
-pub fn init_git() -> Result<(), io::Error> {
+pub fn init_git() -> Result<()> {
     create_directory("./ugit/objects/info")?;
     create_directory("./ugit/objects/pack")?;
     create_directory("./ugit/refs/heads")?;
@@ -18,11 +18,7 @@ pub fn init_git() -> Result<(), io::Error> {
     create_directory("./ugit/logs")?;
 
     fs::write("./ugit/HEAD", "ref: refs/heads/main\n")?;
-    fs::write(
-        "./ugit/config",
-        "[core]\n\trepositoryformatversion = 0\n\tbare = false\n",
-    )?;
-    fs::write("./ugit/index", "")?;
+    fs::write("./ugit/config", "[core]\n\trepositoryformatversion = 0\n\tbare = false\n")?;
 
     println!("Initialized git: Created directory structure in './ugit'");
 

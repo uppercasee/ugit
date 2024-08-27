@@ -1,4 +1,6 @@
-use super::index_read::{find_index, read_from_file};
+use crate::find_index;
+
+use super::index_read::read_from_file;
 
 
 pub fn rm() -> anyhow::Result<()> {

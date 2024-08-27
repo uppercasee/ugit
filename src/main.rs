@@ -44,7 +44,7 @@ fn main() -> anyhow::Result<()> {
         Some(Commands::LsFiles {}) => {
             index_read()?;
         }
-        Some(Commands::RmFiles {}) => {
+        Some(Commands::Rm {}) => {
             rm()?;
         }
         None => {

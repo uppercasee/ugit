@@ -52,7 +52,7 @@ pub enum Commands {
         objectfile: String,
     },
 
-    RmFiles{},
+    Rm{},
     
     /// Lists the index file
     LsFiles {},

@@ -51,6 +51,8 @@ pub enum Commands {
         /// Path to the object file.
         objectfile: String,
     },
+
+    RmFiles{},
     
     /// Lists the index file
     LsFiles {},

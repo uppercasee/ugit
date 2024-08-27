@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use clap::Parser;
-use ugit::{add_to_index, clear_git, index_read, init_git};
+use ugit::{add_to_index, clear_git, index_read, init_git, rm};
 use ugit::{cat_file, hash_objects, ls_tree, write_tree};
 use ugit::{Args, Commands};
 
@@ -43,6 +43,9 @@ fn main() -> anyhow::Result<()> {
         }
         Some(Commands::LsFiles {}) => {
             index_read()?;
+        }
+        Some(Commands::RmFiles {}) => {
+            rm()?;
         }
         None => {
             println!("No commands provided");

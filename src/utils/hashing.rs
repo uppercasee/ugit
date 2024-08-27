@@ -1,6 +1,7 @@
-use std::fs;
 use anyhow::{Context, Result};
+use std::fs;
 
+/// Given a hash, return the full path to the object file.
 pub fn get_full_path_from_hash(hash: &str) -> Result<String> {
     let prefix = &hash[..2];
     let suffix = &hash[2..];

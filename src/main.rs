@@ -24,7 +24,10 @@ fn main() -> anyhow::Result<()> {
         Some(Commands::Clear) => {
             clear_git()?;
         }
-        Some(Commands::CatFile { pretty_print, object_hash, }) => {
+        Some(Commands::CatFile {
+            pretty_print,
+            object_hash,
+        }) => {
             cat_file(pretty_print, object_hash)?;
         }
         Some(Commands::HashObject { objectfile }) => {
@@ -36,7 +39,8 @@ fn main() -> anyhow::Result<()> {
             ls_tree(object_hash)?;
         }
         Some(Commands::WriteTree { tree }) => {
-            let hash = write_tree(tree)?;
+            let hash_vec = write_tree(tree)?;
+            let hash = hex::encode(hash_vec);
             println!("{}", hash);
         }
         Some(Commands::Add { objectfile }) => {

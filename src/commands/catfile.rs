@@ -6,7 +6,7 @@ use std::{
     io::{BufRead, BufReader, Read, Write},
 };
 
-use super::get_full_path_from_hash;
+use crate::get_full_path_from_hash;
 
 pub fn cat_file(pretty_print: bool, object_hash: String) -> anyhow::Result<()> {
     let path = get_full_path_from_hash(&object_hash)?;

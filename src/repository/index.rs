@@ -3,23 +3,22 @@ use byteorder::{LittleEndian, WriteBytesExt};
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read, Write};
 
-use crate::{find_index, hash_objects};
+use crate::{find_index, hash_objects, write_tree};
 
 #[derive(Debug)]
 pub struct IndexEntry {
-    mode: u16,      // 2 bytes 100644 -> file and 040000 -> directory
+    pub mode: u16,      // 2 bytes 100644 -> file and 040000 -> directory
     file_size: u32, // 4 bytes file size in bytes
     mtime: u32,     // 4 bytes last modified time in seconds since the epoch
-    ctime: u32,     // 4 bytes last changed time in seconds since the epoch
     sha1: [u8; 20],
-    path: String,
+    pub path: String,
 }
 
 pub struct Index {
     signature: [u8; 4],
     version: u32,
     number_of_entries: u32,
-    entries: Vec<IndexEntry>,
+    pub entries: Vec<IndexEntry>,
 }
 
 impl Default for Index {
@@ -35,10 +34,12 @@ impl Default for Index {
             file.write_all(b"DIRC").expect("Failed to write signature");
 
             // Write the version (4 bytes, little-endian)
-            file.write_u32::<LittleEndian>(4).expect("Failed to write version");
+            file.write_u32::<LittleEndian>(4)
+                .expect("Failed to write version");
 
             // Write the entry count (4 bytes, little-endian)
-            file.write_u32::<LittleEndian>(0).expect("Failed to write entry count");
+            file.write_u32::<LittleEndian>(0)
+                .expect("Failed to write entry count");
         }
 
         // Return a default `Index` instance
@@ -102,8 +103,8 @@ impl Index {
         reader
             .read_exact(&mut signature)
             .with_context(|| "Failed to read signature from index file")?;
-        if signature != self.signature {
-            return Err(anyhow::anyhow!("Invalid signature in index file").into());
+        if signature != *b"DIRC" {
+            return Err(anyhow::anyhow!("Invalid signature in index file"));
         }
 
         // Read the version (4 bytes)
@@ -113,7 +114,7 @@ impl Index {
             .with_context(|| "Failed to read version from index file")?;
         let version = u32::from_le_bytes(version_bytes);
         if version != self.version {
-            return Err(anyhow::anyhow!("Invalid version in index file").into());
+            return Err(anyhow::anyhow!("Invalid version in index file"));
         }
 
         // Read the entry count (4 bytes)
@@ -144,12 +145,6 @@ impl Index {
                 .with_context(|| "Failed to read mtime from index file")?;
             let mtime = u32::from_le_bytes(mtime_bytes);
 
-            let mut ctime_bytes = [0u8; 4];
-            reader
-                .read_exact(&mut ctime_bytes)
-                .with_context(|| "Failed to read ctime from index file")?;
-            let ctime = u32::from_le_bytes(ctime_bytes);
-
             let mut sha1 = [0u8; 20];
             reader
                 .read_exact(&mut sha1)
@@ -166,7 +161,6 @@ impl Index {
                 mode,
                 file_size,
                 mtime,
-                ctime,
                 sha1,
                 path,
             });
@@ -188,7 +182,6 @@ impl IndexEntry {
         bytes.extend_from_slice(&self.mode.to_le_bytes());
         bytes.extend_from_slice(&self.file_size.to_le_bytes());
         bytes.extend_from_slice(&self.mtime.to_le_bytes());
-        bytes.extend_from_slice(&self.ctime.to_le_bytes());
         bytes.extend_from_slice(&self.sha1);
         bytes.extend_from_slice(self.path.as_bytes());
         bytes.push(0);
@@ -199,19 +192,30 @@ impl IndexEntry {
         let mode = u16::from_le_bytes([bytes[0], bytes[1]]);
         let file_size = u32::from_le_bytes([bytes[2], bytes[3], bytes[4], bytes[5]]);
         let mtime = u32::from_le_bytes([bytes[6], bytes[7], bytes[8], bytes[9]]);
-        let ctime = u32::from_le_bytes([bytes[10], bytes[11], bytes[12], bytes[13]]);
         let mut sha1 = [0; 20];
-        sha1.copy_from_slice(&bytes[14..34]);
-        let path = String::from_utf8(bytes[34..].to_vec())
+        sha1.copy_from_slice(&bytes[10..30]);
+        let path = String::from_utf8(bytes[30..].to_vec())
             .with_context(|| "Failed to convert path to string")?;
         Ok(IndexEntry {
             mode,
             file_size,
             mtime,
-            ctime,
             sha1,
             path,
         })
+    }
+
+    pub fn get_sha(is_dir: bool, path: &str) -> Result<[u8;20]> {
+        let sha;
+        if is_dir {
+            sha = write_tree(path.to_string())?;
+            Ok(sha)
+        }
+        else {
+           sha = hash_objects(path)?;
+           Ok(sha)
+        }
+
     }
 
     pub fn from_path(path: &str) -> Result<IndexEntry> {
@@ -231,26 +235,17 @@ impl IndexEntry {
             .duration_since(std::time::SystemTime::UNIX_EPOCH)?
             .as_secs() as u32;
 
-        let ctime = metadata
-            .created()
-            .ok()
-            .and_then(|created_time| {
-                created_time
-                    .duration_since(std::time::SystemTime::UNIX_EPOCH)
-                    .ok()
-                    .map(|dur| dur.as_secs() as u32)
-            })
-            .unwrap_or(0); // Use a default value of 0 if ctime is not available
+        let sha1 = IndexEntry::get_sha(metadata.is_dir(), path)?;
 
-        let sha1 = hash_objects(&path.to_string())?;
-
-        println!("mode: {:o}, file_size: {}, mtime: {}, ctime: {}, sha1: {:?}, path: {}", mode, file_size, mtime, ctime, sha1, path);
+        println!(
+            "mode: {:o}, file_size: {}, mtime: {}, sha1: {:?}, path: {}",
+            mode, file_size, mtime, sha1, path
+        );
 
         Ok(IndexEntry {
             mode,
             file_size,
             mtime,
-            ctime,
             sha1,
             path: path.to_string(),
         })

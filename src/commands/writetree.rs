@@ -1,15 +1,14 @@
 use crate::hash_objects;
 use anyhow::{Context, Result};
-use std::fs::{self, File};
-use std::io::Write;
-use std::path::Path;
+use crypto_hash::{hex_digest, Algorithm};
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
 use ignore::WalkBuilder;
-use crypto_hash::{hex_digest, Algorithm};
+use std::fs::{self, File};
+use std::io::Write;
+use std::path::Path;
 
-
-pub fn write_tree(tree: String) -> anyhow::Result<String> {
+pub fn write_tree(tree: String) -> anyhow::Result<[u8;20]> {
     let mut is_first_entry = true;
     let mut entries = Vec::new();
     for entry in WalkBuilder::new(tree)
@@ -52,7 +51,8 @@ pub fn write_tree(tree: String) -> anyhow::Result<String> {
         } else if metadata.is_dir() {
             let new_entry = format!("./{}", entry);
             let mode = "040000";
-            let hash = write_tree(new_entry)?;
+            let hash_vec = write_tree(new_entry)?;
+            let hash = hex::encode(hash_vec);
             let entry_line = format!("{} tree {} {}", mode, entry, hash);
             tree.push(entry_line);
         }
@@ -67,9 +67,15 @@ pub fn write_tree(tree: String) -> anyhow::Result<String> {
 
     // println!("{:?}", data);
 
-    let hash = store_tree_object(&String::from_utf8(data).context("couldn't convert data to string")?)?;
+    let hash =
+        store_tree_object(&String::from_utf8(data).context("couldn't convert data to string")?)?;
+
+    let mut hash_bytes = [0u8; 20];
+    hex::decode_to_slice(&hash, hash_bytes.as_mut())
+        .with_context(|| format!("couldn't decode hash: {}", hash))?;
+
     // println!("{}", hash);
-    Ok(hash)
+    Ok(hash_bytes)
 }
 
 pub fn store_tree_object(tree_content: &str) -> Result<String> {
@@ -77,20 +83,22 @@ pub fn store_tree_object(tree_content: &str) -> Result<String> {
     let hash = hex_digest(Algorithm::SHA1, tree_content.as_bytes());
 
     // Construct the object file path
-    let object_path = Path::new("ugit/objects")
-        .join(&hash[0..2])
-        .join(&hash[2..]);
+    let object_path = Path::new("ugit/objects").join(&hash[0..2]).join(&hash[2..]);
 
     // Create directories if they don't exist
-    fs::create_dir_all(object_path.parent().unwrap()).context("couldn't create object directory")?;
+    fs::create_dir_all(object_path.parent().unwrap())
+        .context("couldn't create object directory")?;
 
     // Write the tree object content to the object file
     let mut file = File::create(&object_path)
         .with_context(|| format!("couldn't create object file: {:?}", object_path))?;
     let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
-    encoder.write_all(tree_content.as_bytes()).context("couldn't write to encoder")?;
+    encoder
+        .write_all(tree_content.as_bytes())
+        .context("couldn't write to encoder")?;
     let compressed_data = encoder.finish().context("couldn't finish encoding")?;
-    file.write_all(&compressed_data).context("couldn't write to object file")?;
+    file.write_all(&compressed_data)
+        .context("couldn't write to object file")?;
 
     Ok(hash)
 }

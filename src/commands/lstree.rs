@@ -6,10 +6,17 @@ use std::{
     io::{BufRead, BufReader, Read, Write},
 };
 
+use crate::get_full_path_from_hash;
+
 pub fn ls_tree (object_hash: String) -> anyhow::Result<()> {
-    let hash = &object_hash[..2];
-    let file = &object_hash[2..];
+    let path = get_full_path_from_hash(&object_hash)?;
+    let mut parts = path.split('/');
+
+    let hash = parts.next().expect("hash is missing");
+    let file = parts.next().expect("file is missing");
+
     let path = format!("./ugit/objects/{}/{}", hash, file);
+
     let f = fs::File::open(path).context("couldn't open ugit/objects file")?;
     let z = ZlibDecoder::new(f);
     let mut z = BufReader::new(z);

@@ -13,22 +13,18 @@
 - **cat-file:** Provide content or type and size information for repository objects. 
 - **hash-object:** Compute the object ID and creates a blob from a file.
 - **ls-tree:** List the contents of a tree object.
+- **write-tree:** Write a tree object from the current index.
+- **rm**: Removes files from the staging area (index) and, optionally, from the working directory.  
 
 ## Planned Features
-- [x] **write-tree:** Write a tree object from the current index.
-- [ ] **commit-tree:** Create a new commit object.
 - [ ] **clone:** Clone a repository into a new directory.
-- [ ] **branch:** Create, list, rename, or delete branches.
-- [ ] **checkout:** Switch branches or restore working tree files.
-- [ ] **merge:** Join two or more development histories together.
-- [ ] **rebase:** Reapply commits on top of another base tip.
-- [ ] **log:** Show commit logs.
-- [ ] **status:** Show the status of working tree files.
+- [ ] **commit-tree:** Create a new commit object.
 - [ ] **diff:** Show changes between commits, commit and working tree, etc.
-- [ ] **remote:** Manage set of tracked repositories.
 - [ ] **fetch:** Download objects and refs from another repository.
-- [ ] **push:** Update remote refs along with associated objects.
+- [ ] **log:** Show commit logs.
 - [ ] **pull:** Fetch from and integrate with another repository or a local branch.
+- [ ] **push:** Update remote refs along with associated objects.
+- [ ] **status:** Show the status of working tree files.
 
 ## Getting Started
 To get started with ugit, you can clone the repository and build it locally. 

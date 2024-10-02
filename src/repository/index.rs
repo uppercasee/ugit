@@ -1,17 +1,21 @@
 use anyhow::{Context, Result};
 use byteorder::{LittleEndian, WriteBytesExt};
+use ignore::WalkBuilder;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read, Write};
+use std::os::unix::fs::PermissionsExt;
 
-use crate::{find_index, hash_objects, write_tree};
+use crate::{find_index, hash_objects};
 
 #[derive(Debug)]
 pub struct IndexEntry {
-    pub mode: u16,      // 2 bytes 100644 -> file and 040000 -> directory
+    pub mode: u16,  // 2 bytes 100644 -> file and 040000 -> directory
     file_size: u32, // 4 bytes file size in bytes
     mtime: u32,     // 4 bytes last modified time in seconds since the epoch
+    // TODO: ctime: u32,
     sha1: [u8; 20],
     pub path: String,
+    // TODO: Flags
 }
 
 pub struct Index {
@@ -34,7 +38,7 @@ impl Default for Index {
             file.write_all(b"DIRC").expect("Failed to write signature");
 
             // Write the version (4 bytes, little-endian)
-            file.write_u32::<LittleEndian>(4)
+            file.write_u32::<LittleEndian>(2)
                 .expect("Failed to write version");
 
             // Write the entry count (4 bytes, little-endian)
@@ -45,7 +49,7 @@ impl Default for Index {
         // Return a default `Index` instance
         Index {
             signature: *b"DIRC",  // Default signature for Git index files
-            version: 4,           // Default version
+            version: 2,           // Default version
             number_of_entries: 0, // Default number of entries
             entries: Vec::new(),  // Empty vector for entries
         }
@@ -54,6 +58,10 @@ impl Default for Index {
 
 impl Index {
     pub fn add_entries(&mut self, entries: Vec<IndexEntry>) {
+        // this helps remove duplicate entries....
+        self.entries
+            .retain(|entry| !entries.iter().any(|new_entry| new_entry.path == entry.path));
+
         self.entries.extend(entries);
         self.number_of_entries = self.entries.len() as u32;
     }
@@ -205,49 +213,75 @@ impl IndexEntry {
         })
     }
 
-    pub fn get_sha(is_dir: bool, path: &str) -> Result<[u8;20]> {
-        let sha;
-        if is_dir {
-            sha = write_tree(path.to_string())?;
-            Ok(sha)
+    pub fn get_sha(path: &str) -> Result<[u8; 20]> {
+        // Check if the path is a directory
+        if std::fs::metadata(path)?.is_dir() {
+            return Err(anyhow::anyhow!("Directories are not supported"));
         }
-        else {
-           sha = hash_objects(path)?;
-           Ok(sha)
-        }
-
+    
+        // If the path is a valid file, compute its SHA hash
+        let sha = hash_objects(path)?;
+        Ok(sha)
     }
+    
 
-    pub fn from_path(path: &str) -> Result<IndexEntry> {
-        let metadata = std::fs::metadata(path)
-            .with_context(|| format!("Failed to read metadata for path: {}", path))?;
+    pub fn update_index(path: &str) -> Result<Vec<IndexEntry>> {
+        let mut is_first_entry = true;
+        let mut path_entries = Vec::new();
+        for entry in WalkBuilder::new(path)
+            .hidden(true)
+            .git_ignore(true)
+            .git_exclude(false)
+            .build()
+        {
+            let entry = entry?;
+            let path = entry.path();
+            let path = path.strip_prefix("./")?;
+            let path = path.to_str().context("couldn't convert path to string")?;
+    
+            if is_first_entry {
+                is_first_entry = false;
+                continue; // Skip processing the first entry
+            }
+    
+            if !path.trim().is_empty() {
+                path_entries.push(path.to_string()); // Collect the path as a String
+                                                // println!("{}", path);
+            }
+        }
+        // sort entries
+        path_entries.sort();
 
-        let mode = if metadata.is_dir() {
-            0o040000
-        } else {
-            0o100644
-        };
+        let mut entries = Vec::new();
+        for entry in path_entries {
+            let metadata = std::fs::metadata(&entry).context("couldn't get metadata")?;
+            let is_dir = metadata.is_dir();
 
-        let file_size = metadata.len() as u32;
+            if is_dir {
+                continue;
+            }
 
-        let mtime = metadata
-            .modified()?
-            .duration_since(std::time::SystemTime::UNIX_EPOCH)?
-            .as_secs() as u32;
+            let sha = IndexEntry::get_sha(&entry)?;
 
-        let sha1 = IndexEntry::get_sha(metadata.is_dir(), path)?;
+            let mode = if metadata.is_dir() {
+                    0o040000 // Directory
+                } else if metadata.file_type().is_symlink() {
+                    0o120000 // Symbolic link
+                } else if metadata.permissions().mode() & 0o111 != 0 {
+                    0o100755 // Executable file
+                } else {
+                    0o100644 // Regular file
+                };
 
-        println!(
-            "mode: {:o}, file_size: {}, mtime: {}, sha1: {:?}, path: {}",
-            mode, file_size, mtime, sha1, path
-        );
-
-        Ok(IndexEntry {
-            mode,
-            file_size,
-            mtime,
-            sha1,
-            path: path.to_string(),
-        })
+            let entry = IndexEntry {
+                mode,
+                file_size: metadata.len() as u32,
+                mtime: metadata.modified()?.duration_since(std::time::SystemTime::UNIX_EPOCH)?.as_secs() as u32,
+                sha1: sha,
+                path: entry,
+            };
+            entries.push(entry);
+        }
+        Ok(entries)
     }
 }

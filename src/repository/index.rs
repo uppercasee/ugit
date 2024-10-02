@@ -228,29 +228,35 @@ impl IndexEntry {
     pub fn update_index(path: &str) -> Result<Vec<IndexEntry>> {
         let mut is_first_entry = true;
         let mut path_entries = Vec::new();
-        for entry in WalkBuilder::new(path)
-            .hidden(true)
-            .git_ignore(true)
-            .git_exclude(false)
-            .build()
-        {
-            let entry = entry?;
-            let path = entry.path();
-            let path = path.strip_prefix("./")?;
-            let path = path.to_str().context("couldn't convert path to string")?;
-    
-            if is_first_entry {
-                is_first_entry = false;
-                continue; // Skip processing the first entry
+        
+        if std::fs::metadata(path)?.is_dir() {
+            // If the path is a directory, walk through it and collect all the files
+            for entry in WalkBuilder::new(path)
+                .hidden(true)
+                .git_ignore(true)
+                .git_exclude(false)
+                .build()
+            {
+                let entry = entry?;
+                let path = entry.path();
+                let path = path.strip_prefix("./")?;
+                let path = path.to_str().context("couldn't convert path to string")?;
+        
+                if is_first_entry {
+                    is_first_entry = false;
+                    continue; // Skip processing the first entry
+                }
+        
+                if !path.trim().is_empty() {
+                    path_entries.push(path.to_string()); // Collect the path as a String
+                                                    // println!("{}", path);
+                }
             }
-    
-            if !path.trim().is_empty() {
-                path_entries.push(path.to_string()); // Collect the path as a String
-                                                // println!("{}", path);
-            }
+            // sort entries
+            path_entries.sort();
+        } else {
+            path_entries.push(path.to_string());
         }
-        // sort entries
-        path_entries.sort();
 
         let mut entries = Vec::new();
         for entry in path_entries {

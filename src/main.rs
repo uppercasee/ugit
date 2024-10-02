@@ -49,8 +49,11 @@ fn main() -> anyhow::Result<()> {
         Some(Commands::LsFiles {}) => {
             index_read()?;
         }
-        Some(Commands::Rm {}) => {
-            rm()?;
+        Some(Commands::Rm {
+            cached,
+            objectfile,
+        }) => {
+            rm(cached, objectfile)?;
         }
         None => {
             println!("No commands provided");

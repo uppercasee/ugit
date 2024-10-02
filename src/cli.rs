@@ -52,7 +52,14 @@ pub enum Commands {
         objectfile: String,
     },
 
-    Rm{},
+    Rm{
+        /// cached flag
+        #[clap(short, long)]
+        cached: bool,
+
+        /// Path to the object file.
+        objectfile: String,
+    },
     
     /// Lists the index file
     LsFiles {},

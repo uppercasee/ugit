@@ -52,8 +52,9 @@ pub enum Commands {
         objectfile: String,
     },
 
+    /// Removes a file from the working directory.
     Rm{
-        /// cached flag
+        /// cached flag, if true, only remove from the index, not the working directory
         #[clap(short, long)]
         cached: bool,
 
